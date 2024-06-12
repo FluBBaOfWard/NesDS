@@ -57,9 +57,9 @@ mapper198init:
 	bl setbank_ppu
 
 	adr r0, readl
-	str_ r0, m6502ReadTbl+8
+	str_ r0, rp2A03MemRead
 	adr r0, writel
-	str_ r0, m6502WriteTbl+8
+	str_ r0, rp2A03MemWrite
 /*
 	adr r0, readh
 	str_ r0, m6502ReadTbl+12
@@ -71,9 +71,6 @@ mapper198init:
 @-------------------------------------------------------------------
 writel:
 @-------------------------------------------------------------------
-	ldr r2, =0x4019
-	cmp addy, r2
-	bcc IO_W
 	bic r1, addy, #0xE000
 	ldr r2, =NES_XRAM
 	strb r0, [r2, r1]
@@ -81,9 +78,6 @@ writel:
 @-------------------------------------------------------------------
 readl:
 @-------------------------------------------------------------------
-	ldr r2, =0x4019
-	cmp addy, r2
-	bcc IO_R
 	bic r1, addy, #0xE000
 	ldr r2, =NES_XRAM
 	ldrb r0, [r2, r1]

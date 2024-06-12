@@ -1,5 +1,6 @@
 #include <nds.h>
 #include "c_defs.h"
+#include "NesMachine.h"
 
 extern u16 font;
 extern u16 fontpal;
@@ -68,7 +69,7 @@ char cusfont[] = {
 ******************************/
 void showconsole() {
 	//clearconsole();
-	if(__emuflags & ALLPIXEL) {
+	if(globals.emuFlags & ALLPIXEL) {
 		videoSetModeSub(MODE_0_2D);
 		videoBgDisableSub(3);
 		dmaFillWords(0, BG_GFX_SUB , 192 * 256);		//clear the sub screen
@@ -76,7 +77,7 @@ void showconsole() {
 		dmaCopyHalfWords(3,cusfont,(u16*)(SUB_CHR+0x1400),6*32);
 		dmaCopyHalfWords(3,&fontpal,(u16*)BG_PALETTE_SUB,128);
 	}
-	__emuflags &= ~ALLPIXEL;
+	globals.emuFlags &= ~ALLPIXEL;
 
 	powerOn(POWER_2D_B);
 	powerOn(PM_BACKLIGHT_BOTTOM | PM_BACKLIGHT_TOP);
@@ -111,9 +112,9 @@ void showconsole() {
 void hideconsole() {
 	swiWaitForVBlank();
 	//powerOff(POWER_2D_B);
-	if((!(__emuflags & ALLPIXELON))) {
-		__emuflags &= ~ALLPIXEL;
-		if(!(__emuflags & SCREENSWAP)) {
+	if((!(globals.emuFlags & ALLPIXELON))) {
+		globals.emuFlags &= ~ALLPIXEL;
+		if(!(globals.emuFlags & SCREENSWAP)) {
 			powerOff(PM_BACKLIGHT_BOTTOM);			//This cannot be accessed directly.
 			powerOn(PM_BACKLIGHT_TOP);
 			lcdMainOnTop();
@@ -125,23 +126,23 @@ void hideconsole() {
 	} else {
 		int pos = ad_ypos / (1 << 16);
 
-		__emuflags |= ALLPIXEL;
+		globals.emuFlags |= ALLPIXEL;
 		dmaFillWords(0, BG_GFX_SUB , 192 * 256);		//clear the sub screen
 		dmaCopy(BG_PALETTE, BG_PALETTE_SUB, 0x400);		//copy the palette
 		powerOn(PM_BACKLIGHT_BOTTOM);
 		powerOn(PM_BACKLIGHT_TOP);
 
 		if(pos < -(240 - 192)/2) {
-			__emuflags |= SCREENSWAP;
-			all_pix_start = 0;
-			all_pix_end = 1 - pos;
+			globals.emuFlags |= SCREENSWAP;
+			globals.ppu.pixStart = 0;
+			globals.ppu.pixEnd = 1 - pos;
 			lcdMainOnBottom();
 		} else {
-			__emuflags &= ~SCREENSWAP;
-			all_pix_start = 192 - pos;
-			if(all_pix_start > 239)
-				all_pix_start = 239;
-			all_pix_end = 240;
+			globals.emuFlags &= ~SCREENSWAP;
+			globals.ppu.pixStart = 192 - pos;
+			if(globals.ppu.pixStart > 239)
+				globals.ppu.pixStart = 239;
+			globals.ppu.pixEnd = 240;
 			lcdMainOnTop();
 		}
 		videoSetModeSub(MODE_5_2D);

@@ -1,6 +1,8 @@
 #ifdef __arm__
 
 ;@-----------------------------------------------------------------------------
+	#include "macro.h"
+//	#include "RP2C02.i"
 	#include "equates.h"
 ;@-----------------------------------------------------------------------------
 	.global PPU_init
@@ -8,14 +10,14 @@
 	.global PPU_R
 	.global PPU_W
 	.global ppuOamDataW
+	.global updateINTPin
+	.global ppuDoScanline
 	.global ntsc_pal_reset
 	.global agb_nt_map
 	.global vram_map
 	.global vram_write_tbl
 	.global VRAM_chr
 	.global paletteinit
-	.global PaletteTxAll
-	.global Update_Palette
 	.global newframe
 	.global agb_pal
 	.global writeBG
@@ -71,6 +73,76 @@
 	.byte 243,191,63, 131,211,19, 79,223,75, 88,248,152, 0,235,219, 102,102,102, 13,13,13, 13,13,13
 	.byte 255,255,255, 171,231,255, 199,215,255, 215,203,255, 255,199,255, 255,199,219,255, 191,179,255, 219,171
 	.byte 255,231,163, 227,255,163, 171,243,191, 179,255,207, 159,255,243, 209,209,209, 17,17,17, 17,17,17
+
+@nes_rgb_1:		@AspiringSquire Real palette
+	.byte 108,108,108, 0,38,142, 0,0,168, 64,0,148, 112,0,112, 120,0,64, 112,0,0, 98,22,0
+	.byte 68,36,0, 52,52,0, 0,80,0, 0,68,68, 0,64,96, 0,0,0, 16,16,16, 16,16,16
+	.byte 186,186,186, 32,92,220, 56,56,255, 128,32,240, 192,0,192, 208,20,116, 208,32,32, 172,64,20
+	.byte 124,84,0, 88,100,0, 0,136,0, 0,116,104, 0,116,156, 32,32,32, 16,16,16, 16,16,16
+	.byte 255,255,255, 76,160,255, 136,136,255, 192,108,255, 255,80,255, 255,100,184, 255,120,120, 255,150,56
+	.byte 219,171,0, 162,202,32, 74,220,74, 44,204,164, 28,194,234, 88,88,88, 16,16,16, 16,16,16
+	.byte 255,255,255, 176,212,255, 196,196,255, 232,184,255, 255,176,255, 255,184,232, 255,196,196, 255,212,168
+	.byte 255,232,144, 240,244,164, 192,255,192, 172,244,240, 160,232,255, 194,194,194, 32,32,32, 16,16,16
+ 
+@nes_rgb_2:		@Chris Covell palette
+	.byte 128,128,128, 0,61,166, 0,18,176, 68,0,150, 161,0,94, 199,0,40, 186,6,0, 140,23,0
+	.byte 92,47,0, 16,69,0, 5,74,0, 0,71,46, 0,65,102, 0,0,0, 5,5,5, 5,5,5
+	.byte 199,199,199, 0,119,255, 33,85,255, 130,55,250, 235,47,181, 255,41,80, 255,34,0, 214,50,0
+	.byte 196,98,0, 53,128,0, 5,143,0, 0,138,85, 0,153,204, 33,33,33, 9,9,9, 9,9,9
+	.byte 255,255,255, 15,215,255, 105,162,255, 212,128,255, 255,69,243, 255,97,139, 255,136,51, 255,156,18
+	.byte 250,188,32, 159,227,14, 43,240,53, 12,240,164, 5,251,255, 94,94,94, 13,13,13, 13,13,13
+	.byte 255,255,255, 166,252,255, 179,236,255, 218,171,235, 255,168,249, 255,171,179, 255,210,176, 255,239,166
+	.byte 255,247,156, 215,232,149, 166,237,175, 162,242,218, 153,255,252, 221,221,221, 17,17,17, 17,17,17
+ 
+@nes_rgb_3:		@ CrashMan palette
+	.byte 88,88,88, 0,17,115, 0,0,98, 71,43,191, 151,0,135, 145,0,9, 111,17,0, 76,16,8
+	.byte 55,30,0, 0,47,0, 0,85,0, 0,77,21, 0,40,64, 0,0,0, 0,0,0, 0,0,0
+	.byte 160,160,160, 0,68,153, 44,44,200, 89,13,170, 174,0,106, 176,0,64, 184,52,24, 152,48,16
+	.byte 112,64,0, 48,128,0, 32,120,8, 0,123,51, 28,104,136, 0,0,0, 0,0,0, 0,0,0
+	.byte 248,248,248, 38,123,225, 88,112,240, 152,120,248, 255,115,200, 240,96,168, 208,123,55, 224,144,64
+	.byte 248,179,0, 140,188,0, 64,168,88, 88,248,152, 0,183,191, 120,120,120, 0,0,0, 0,0,0
+	.byte 255,255,255, 167,231,255, 184,184,248, 216,184,248, 230,166,255, 242,157,196, 240,192,176, 252,228,176
+	.byte 224,224,30, 216,248,120, 192,232,144, 149,247,200, 152,224,232, 248,216,248, 0,0,0, 0,0,0
+
+@nes_rgb_4:		@ Matthew Conte palette
+	.byte 128,128,128, 0,0,187, 55,0,191, 132,0,166, 187,0,106, 183,0,30, 179,0,0, 145,38,0
+	.byte 123,43,0, 0,62,0, 0,72,13, 0,60,34, 0,47,102, 0,0,0, 5,5,5, 5,5,5
+	.byte 200,200,200, 0,89,255, 68,60,255, 183,51,204, 255,51,170, 255,55,94, 255,55,26, 213,75,0
+	.byte 196,98,0, 60,123,0, 30,132,21, 0,149,102, 0,132,196, 17,17,17, 9,9,9, 9,9,9
+	.byte 255,255,255, 0,149,255, 111,132,255, 213,111,255, 255,119,204, 255,111,153, 255,123,89, 255,145,95
+	.byte 255,162,51, 166,191,0, 81,217,106, 77,213,174, 0,217,255, 102,102,102, 13,13,13, 13,13,13
+	.byte 255,255,255, 132,191,255, 187,187,255, 208,187,255, 255,191,234, 255,191,204, 255,196,183, 255,204,174
+	.byte 255,217,162, 204,225,153, 174,238,183, 170,247,238, 179,238,255, 221,221,221, 17,17,17, 17,17,17
+
+@nes_rgb_5:		@ MESS palette
+	.byte 116,116,116, 36,24,140, 0,0,168, 68,0,156, 140,0,116, 168,0,16, 164,0,0, 124,8,0
+	.byte 64,44,0, 0,68,0, 0,80,0, 0,60,20, 24,60,92, 0,0,0, 0,0,0, 0,0,0
+	.byte 188,188,188, 0,112,236, 32,56,236, 128,0,240, 188,0,188, 228,0,88, 216,40,0, 200,76,12
+	.byte 136,112,0, 0,148,0, 0,168,0, 0,144,56, 0,128,136, 0,0,0, 0,0,0, 0,0,0
+	.byte 252,252,252, 60,188,252, 92,148,252, 64,136,252, 244,120,252, 252,116,180, 252,116,96, 252,152,56
+	.byte 240,188,60, 128,208,16, 76,220,72, 88,248,152, 0,232,216, 0,0,0, 0,0,0, 0,0,0
+	.byte 252,252,252, 168,228,252, 196,212,252, 212,200,252, 252,196,252, 252,196,216, 252,188,176, 252,216,168
+	.byte 252,228,160, 224,252,160, 168,240,188, 176,252,204, 156,252,240, 0,0,0, 0,0,0, 0,0,0
+
+@nes_rgb_6:		@PasoFami99 palette
+	.byte 127,127,127, 0,0,255, 0,0,191, 71,43,191, 151,0,135, 171,0,35, 171,19,0, 139,23,0
+	.byte 83,48,0, 0,120,0, 0,107,0, 0,91,0, 0,67,88, 0,0,0, 0,0,0, 0,0,0
+	.byte 191,191,191, 0,120,248, 0,88,248, 107,71,255, 219,0,205, 231,0,91, 248,56,0, 231,95,19
+	.byte 175,127,0, 0,184,0, 0,171,0, 0,171,71, 0,139,139, 0,0,0, 0,0,0, 0,0,0
+	.byte 248,248,248, 63,191,255, 107,136,255, 152,120,248, 248,120,248, 248,88,152, 248,120,88, 255,163,71
+	.byte 248,184,0, 184,248,24, 91,219,87, 88,248,152, 0,235,219, 120,120,120, 0,0,0, 0,0,0
+	.byte 255,255,255, 167,231,255, 184,184,248, 216,184,248, 248,184,248, 251,167,195, 240,208,176, 255,227,171
+	.byte 251,219,123, 216,248,120, 184,248,184, 184,248,216, 0,255,255, 248,216,248, 0,0,0, 0,0,0
+
+@nes_rgb_7:		@Quors palette
+	.byte 63,63,63, 0,31,63, 0,0,63, 31,0,63, 63,0,63, 63,0,32, 63,0,0, 63,32,0
+	.byte 63,63,0, 32,63,0, 0,63,0, 0,63,32, 0,63,63, 0,0,0, 0,0,0, 0,0,0
+	.byte 127,127,127, 64,95,127, 64,64,127, 95,64,127, 127,64,127, 127,64,96, 127,64,64, 127,96,64
+	.byte 127,127,64, 96,127,64, 64,127,64, 64,127,96, 64,127,127, 0,0,0, 0,0,0, 0,0,0
+	.byte 191,191,191, 128,159,191, 128,128,191, 159,128,191, 191,128,191, 191,128,160, 191,128,128, 191,160,128
+	.byte 191,191,128, 160,191,128, 128,191,128, 128,191,160, 128,191,191, 0,0,0, 0,0,0, 0,0,0
+	.byte 255,255,255, 192,223,255, 192,192,255, 223,192,255, 255,192,255, 255,192,224, 255,192,192, 255,224,192
+	.byte 255,255,192, 224,255,192, 192,255,192, 192,255,224, 192,255,255, 0,0,0, 0,0,0, 0,0,0
 
 DISPCNT_INIT = 0x38810010		@1D OBJ
 
@@ -307,6 +379,13 @@ PPU_reset:
 
 	bl ntsc_pal_reset
 
+	ldr r2,=PPULineStateTable
+	ldr r1,[r2],#4
+	mov r0,#-1
+	str_ r0,scanline		;@ Reset scanline, nextChange & lineState
+	str_ r1,nextLineChange
+	str_ r2,lineState
+
 	mov r0,#1
 	strb_ r0,vramAddrInc
 
@@ -332,6 +411,7 @@ PPU_reset:
 	bl filler
 
 	bl paletteinit		;@ Do palette mapping (for VS) & gamma
+	bl renderInit
 
 	ldmfd sp!,{pc}
 ;@-----------------------------------------------------------------------------
@@ -343,21 +423,25 @@ ntsc_pal_reset:
 
 	ldr_ r0,emuFlags
 	tst r0,#PALTIMING
-	
-	ldreq r0,=341*CYCLE		;@ NTSC		(113+2/3)*3
-	ldrne r0,=320*CYCLE		;@ PAL		(106+9/16)*3
-	str_ r0,cyclesPerScanline
-	ldreq r0,=261			;@ NTSC
-	ldrne r0,=311			;@ PAL
-	str_ r0,lastScanline
-	mov globalptr, r1
 
+	ldreq r0,=341			;@ NTSC		(113+2/3)*3
+	ldrne r0,=320			;@ PAL		(106+9/16)*3
+	str_ r0,cyclesPerScanline
+	ldreq r0,=262			;@ NTSC
+	ldrne r0,=312			;@ PAL
+	str_ r0,lastScanline
+	str r0,ppuTotalLines
+
+	mov globalptr, r1
 	bx lr
 ;@-----------------------------------------------------------------------------
 EMU_VBlank:	;@ Call every vblank
 ;@-----------------------------------------------------------------------------
 	stmfd sp!,{r4-r7,globalptr,lr}
 	ldr globalptr,=globals
+
+	mov r0,#0
+	strb_ r0,ppuBusLatch
 
 	ldrb_ r1,cartFlags		;@ Set cartFlags(upper 4-bits (<<8, ignored) + 0000(should be zero)(<<4) + vTsM)
 	DEBUGINFO CARTFLAG, r1
@@ -453,6 +537,9 @@ PAL60: 			.byte 0
 ppusync:		;@ Called on NES scanline 0..239 (r0=line)
 ;@-----------------------------------------------------------------------------
 	stmfd sp!,{r3,lr}
+
+//	mov r0,#0
+//	strb_ r0,ppuOamAdr
 
 	ldr_ r0, emuFlags
 	tst r0, #SOFTRENDER
@@ -642,6 +729,97 @@ DMAline: .word 0
 DMAlinestart: .word 0
 
 ;@-----------------------------------------------------------------------------
+PPULineStateTable:
+	.long 0, newframe			;@ ppuZeroLine
+	.long 119, midFrame			;@ ppuMidScanline
+	.long 241, line241			;@ Last visible scanline
+	.long 241, line241NMI		;@ frameIRQ on
+ppuTotalLines:
+	.long 262, frameEndHook		;@ totalScanlines
+;@-----------------------------------------------------------------------------
+redoScanline:
+;@-----------------------------------------------------------------------------
+	ldr_ r2,lineState
+	ldmia r2!,{r0,r1}
+	str_ r1,nextLineChange		;@ Write nextLineChange & lineState
+	str_ r2,lineState
+	adr lr,continueScanline
+	bx r0
+;@-----------------------------------------------------------------------------
+ppuDoScanline:			;@ Returns number of PPU cycles to execute.
+;@-----------------------------------------------------------------------------
+	stmfd sp!,{lr}
+continueScanline:
+//	ldmia puptr,{r0,r1}			;@ Read scanLine & nextLineChange
+	ldr_ r0,scanline
+	ldr_ r1,nextLineChange
+	add r0,r0,#1
+	cmp r0,r1
+	bpl redoScanline
+	str_ r0,scanline
+
+	cmp r0,#240
+	blmi ppusync
+
+	mov lr,pc
+	ldr_ pc,scanlineHook
+
+	ldr_ r0,scanline
+	subs r0,r0,#240				;@ Return from emulation loop on this scanline
+	ldrne_ r0,cyclesPerScanline
+	ldmfd sp!,{pc}
+
+;@-----------------------------------------------------------------------------
+midFrame:
+	ldrb_ r0,ppuCtrl0
+	strb_ r0,ppuCtrl0Frame		@ Contra likes this
+	bx lr
+
+;@-----------------------------------------------------------------------------
+line241:
+NMIDELAY = 2
+
+	ldrb_ r1,ppuStat
+	orr r1,r1,#0x80		@ vbl flag
+	strb_ r1,ppuStat
+
+	mov r0,#NMIDELAY*3	@ NMI is delayed a few cycles..
+	ldmfd sp!,{pc}		@ Break early
+;@-----------------------------------------------------------------------------
+line241NMI:
+	ldr_ r0,frame
+	add r0,r0,#1
+	str_ r0,frame
+
+	stmfd sp!,{lr}
+	bl updateINTPin
+	ldmfd sp!,{lr}
+	sub cycles,cycles,#NMIDELAY*3*CYCLE
+
+	ldr_ pc, endFrameHook
+
+;@-----------------------------------------------------------------------------
+frameEndHook:
+	adr r2,PPULineStateTable
+	ldr r1,[r2],#4
+	mov r0,#-1
+	str_ r0,scanline		;@ Reset scanline, nextChange & lineState
+	str_ r1,nextLineChange
+	str_ r2,lineState
+	bx lr
+
+;@-----------------------------------------------------------------------------
+updateINTPin:
+;@-----------------------------------------------------------------------------
+	stmfd sp!,{r0,lr}
+	ldrb_ r0,ppuCtrl0
+	ldrb_ r1,ppuStat
+	and r0,r0,r1
+	and r0,r0,#0x80
+	mov lr,pc
+	ldr_ pc,ppuIrqFunc		;@ Set INT Pin (on PPU)
+	ldmfd sp!,{r0,pc}
+;@-----------------------------------------------------------------------------
 PPU_R:	;@
 ;@-----------------------------------------------------------------------------
 	and r0,addy,#7
@@ -702,7 +880,8 @@ ctrl0_W:		;@ (2000)
 	strb_ r0,ppuCtrl0
 	eor r0,r0,r1
 	ands r0,r0,#0x80
-	bx lr
+	bxeq lr
+	b updateINTPin
 ;@-----------------------------------------------------------------------------
 ctrl1_W:		;@ (2001)
 ;@-----------------------------------------------------------------------------
@@ -764,7 +943,9 @@ stat_R:		;@ (2002)
 	and r1,r1,#0x1F
 	orr r0,r2,r1
 
-	bx lr
+	tst r0,#0x80				;@ Was VBlank set before?
+	bxeq lr
+	b updateINTPin
 ;@-----------------------------------------------------------------------------
 oamAddrW:		;@ (2003)
 ;@-----------------------------------------------------------------------------
@@ -774,7 +955,7 @@ oamAddrW:		;@ (2003)
 ppuOamDataR:	;@ (2004)
 ;@-----------------------------------------------------------------------------
 	ldrb_ r1,ppuOamAdr
-	ldr r2, =NES_SPRAM
+	adrl_ r2,ppuOAMMem
 	ldrb r0,[r2,r1]
 //	bic r0,r0,#0x1C			;@ Actualy only when reading attribute (2).
 	strb_ r0,ppuBusLatch
@@ -783,7 +964,7 @@ ppuOamDataR:	;@ (2004)
 ppuOamDataW:	;@ (2004)
 ;@-----------------------------------------------------------------------------
 	ldrb_ r1,ppuOamAdr
-	ldr r2, =NES_SPRAM
+	adrl_ r2,ppuOAMMem
 	strb r0,[r2,r1]
 	add r1,r1,#1
 	strb_ r1,ppuOamAdr
@@ -939,8 +1120,6 @@ writeBG:		;@ loadcart jumps here
 	and r1,r1,#0xf000
 	orr r1,r0,r1
 	strh r1,[r2,addy]	;@ Write tile#
-		cmp r0,#0xfd	@mapper 9 shit..
-		bhs mapper9BGcheck
 	bx lr
 writeAttrib:
 	stmfd sp!,{r3,r4,lr}
@@ -1045,6 +1224,7 @@ newframe:	;@ Called at NES scanline 0
 
 	mov r0,#0
 	strb_ r0,ppuStat			;@ Vbl, sprite0 & sprite ovr clear
+	bl updateINTPin
 
 	bl renderSprites
 
@@ -1511,14 +1691,14 @@ unpack_tiles:	;@ r1=old^new, r5=CHR dst, r6=map ---------UPDATEOBJCHR JUMPS HERE
 
 	ldr decodeptr,=CHR_DECODE
 bg0:
-	movs r0, r1, lsl#16
-	ldrh r0,[bankptr],#2
-	mov r1,r1,lsr#16
-	addeq agbptr,agbptr,#0x800
-	beq bg2
-	mov tilecount,#64
-	ldr_ nesptr,vromBase
-	add nesptr,nesptr,r0,lsl#10	;@ Bank#*$400
+	 movs r0, r1, lsl#16
+	 ldrh r0,[bankptr],#2
+	 mov r1,r1,lsr#16
+	 addeq agbptr,agbptr,#0x800
+	 beq bg2
+	 mov tilecount,#64
+	 ldr_ nesptr,vromBase
+	 add nesptr,nesptr,r0,lsl#10	;@ Bank#*$400
 bg1:
 	  ldrb r0,[nesptr],#1
 	  ldrb r7,[nesptr,#7]
@@ -1568,7 +1748,7 @@ cached: ;@--------------
 	str r7,currentBG
 	bx lr
 
-
+	.pool
 ;@-----------------------------------------------------------------------------
 renderSprites:
 ;@-----------------------------------------------------------------------------
@@ -1579,7 +1759,7 @@ PRIORITY = 0x000	@0x800=AGB OBJ priority 2/3
 	bxne lr
 	stmfd sp!,{r3-r9,lr}
 
-	ldr addy, =NES_SPRAM
+	adrl_ addy,ppuOAMMem
 	ldr_ r0,emuFlags			;@ r7,8=priority flags for scaling type
 	tst r0,#ALPHALERP
 	moveq r7,#0x00200000
@@ -1784,7 +1964,7 @@ spchr_update:
 	@r5  = ppu_decode
 	@r4  = pdatabase
 
-	ldr r9, =NES_SPRAM		;@ r9 = sp
+	adrl_ r9,ppuOAMMem		;@ r9 = sp
 
 	ldr_ r3, scanline
 	cmp r3, #0
@@ -1837,7 +2017,7 @@ msplp:
 	bxeq lr
 
 hidesp:
-	ldr r3, =NES_SPRAM
+	adrl_ r3,ppuOAMMem
 	ldr r2, =0x7000008
 	mov r4, #0x200
 	mov r1, #64

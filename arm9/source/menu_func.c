@@ -20,12 +20,13 @@
 #include "nesclassic_pal.h"
 #include "3dsvc_pal.h"
 #include "nespvm_pal.h"
+#include "NesMachine.h"
 
 extern u32 agb_bg_map[];
 
 u8 gammavalue = 0;
 
-u8 nes_rgb[] = { 
+u8 nes_rgb[] = {
 	0x75,0x75,0x75, 0x27,0x1b,0x8f, 0x00,0x00,0xab, 0x47,0x00,0x9f, 0x8f,0x00,0x77, 0xab,0x00,0x13, 0xa7,0x00,0x00, 0x7f,0x0b,0x00,
 	0x43,0x2f,0x00, 0x00,0x47,0x00, 0x00,0x51,0x00, 0x00,0x3f,0x17, 0x1b,0x3f,0x5f, 0x00,0x00,0x00, 0x00,0x00,0x00, 0x00,0x00,0x00,
 	0xbc,0xbc,0xbc, 0x00,0x73,0xef, 0x23,0x3b,0xef, 0x83,0x00,0xf3, 0xbf,0x00,0xbf, 0xe7,0x00,0x5b, 0xdb,0x2b,0x00, 0xcb,0x4f,0x0f,
@@ -90,7 +91,7 @@ void menu_file_slot(void)
 void menu_file_start(void)
 {
 	consoletext(64*11 + 4, "Stat:", 0);
-	consoletext(64*11 + 4 + 10, (__emuflags & AUTOSRAM) ? "Auto" : "Manual" , 0);
+	consoletext(64*11 + 4 + 10, (globals.emuFlags & AUTOSRAM) ? "Auto" : "Manual" , 0);
 
 	consoletext(64*18 + 4, "Slot:", 0);
 	hex8(64*18 + 4 + 10, slots_num);
@@ -99,15 +100,15 @@ void menu_file_start(void)
 void menu_game_start(void)
 {
 	consoletext(64*11 + 34, "TIMING:", 0);
-	consoletext(64*11 + 48, (__emuflags&PALTIMING)? "PAL ":"NTSC", 0x1000);
+	consoletext(64*11 + 48, (globals.emuFlags&PALTIMING)? "PAL ":"NTSC", 0x1000);
 	consoletext(64*18 + 24, "ALL:", 0);
-	consoletext(64*18 + 32, (__emuflags&ALLPIXELON)? "YES":"NO ", 0x1000);
+	consoletext(64*18 + 32, (globals.emuFlags&ALLPIXELON)? "YES":"NO ", 0x1000);
 }
 
 void menu_game_pal(void)
 {
 	menu_stat = 3;
-	__emuflags |= PALTIMING;
+	globals.emuFlags |= PALTIMING;
 	ntsc_pal_reset();
 	consoletext(64*11 + 48, "PAL ", 0x1000);
 }
@@ -115,7 +116,7 @@ void menu_game_pal(void)
 void menu_game_ntsc(void)
 {
 	menu_stat = 3;
-	__emuflags &= ~PALTIMING;
+	globals.emuFlags &= ~PALTIMING;
 	ntsc_pal_reset();
 	consoletext(64*11 + 48, "NTSC", 0x1000);
 }
@@ -123,8 +124,8 @@ void menu_game_ntsc(void)
 void show_all_pixel(void)
 {
 	menu_stat = 3;
-	__emuflags ^= ALLPIXELON;
-	if(__emuflags & ALLPIXELON) {
+	globals.emuFlags ^= ALLPIXELON;
+	if(globals.emuFlags & ALLPIXELON) {
 		consoletext(64*18 + 32, "YES", 0x1000);	
 	}
 	else
@@ -326,13 +327,13 @@ char *paltxt[] = {
 void menu_display_start(void)
 {
 	consoletext(64*12 + 4, "Blend:", 0);
-	consoletext(64*12 + 16, blendnames[__emuflags&3], 0x1000);
+	consoletext(64*12 + 16, blendnames[globals.emuFlags&3], 0x1000);
 	consoletext(64*19 + 4, "Render Type:", 0);
-	consoletext(64*19 + 28, rendernames[(__emuflags >> 6)&3], 0x1000);
+	consoletext(64*19 + 28, rendernames[(globals.emuFlags >> 6)&3], 0x1000);
 	consoletext(64*4 + 42, "Frame-skip\rPureSoft:", 0);
 	hex8(64*5 + 30*2, soft_frameskip - 1);
 	consoletext(64*11 + 23*2, "Palette\rsync:", 0);
-	consoletext(64*12 + 28*2, __emuflags&PALSYNC ? "On " : "Off", 0x1000); 
+	consoletext(64*12 + 28*2, globals.emuFlags&PALSYNC ? "On " : "Off", 0x1000);
 	consoletext(64*5 + 32, brightxt[gammavalue], 0x1000);
 	hex8(64*8 + 36, palette_value);
 	consoletext(64*10 + 20, paltxt[palette_value], 0x1000);
@@ -499,15 +500,15 @@ void menu_display_br(void)
 {
 	if(lastbutton_cnt > 0 && lastbutton_cnt <= 6) {
 		if(lastbutton_cnt <= 3) {
-			__emuflags &= ~3;
+			globals.emuFlags &= ~3;
 			switch(lastbutton_cnt) {
 				case 1:
-					__emuflags |= 3;//alpha lerp
+					globals.emuFlags |= 3;//alpha lerp
 					break;
 				case 2:
 					break;
 				case 3:
-					__emuflags |= 1;//noflicker
+					globals.emuFlags |= 1;//noflicker
 					break;
 			}
 			rescale(ad_scale,ad_ypos);
@@ -515,8 +516,8 @@ void menu_display_br(void)
 		else {
 			int type = lastbutton_cnt - 4;
 			int i;
-			__emuflags &= ~(3 << 6);
-			__emuflags += type << 6;				
+			globals.emuFlags &= ~(3 << 6);
+			globals.emuFlags += type << 6;
 
 			switch(type) {
 			case 0:	
@@ -560,9 +561,9 @@ void menu_display_br(void)
 			}
 		}
 		//consoletext(64*12 + 4, "Blend Type:", 0);
-		consoletext(64*12 + 16, blendnames[__emuflags&3], 0x1000);
+		consoletext(64*12 + 16, blendnames[globals.emuFlags&3], 0x1000);
 		//consoletext(64*19 + 4, "Render Type:", 0);
-		consoletext(64*19 + 28, rendernames[(__emuflags >> 6)&3], 0x1000);
+		consoletext(64*19 + 28, rendernames[(globals.emuFlags >> 6)&3], 0x1000);
 	} else if(lastbutton_cnt < 9) {
 		if(lastbutton_cnt & 1) {
 			if(soft_frameskip > 1)
@@ -575,10 +576,10 @@ void menu_display_br(void)
 		hex8(64*5 + 30*2, soft_frameskip - 1);
 	}
 	else if(lastbutton_cnt == 9) {
-		__emuflags ^= PALSYNC;
-		if(__emuflags & (SOFTRENDER | PALTIMING))
-			__emuflags &= ~PALSYNC;
-		consoletext(64*12 + 28*2, __emuflags&PALSYNC ? "On " : "Off", 0x1000); 
+		globals.emuFlags ^= PALSYNC;
+		if(globals.emuFlags & (SOFTRENDER | PALTIMING))
+			globals.emuFlags &= ~PALSYNC;
+		consoletext(64*12 + 28*2, globals.emuFlags&PALSYNC ? "On " : "Off", 0x1000);
 	}
 	else if(lastbutton_cnt == 10) {
 		gammavalue++;
@@ -620,28 +621,28 @@ void palset(void) {
 	memcpy(nes_rgb,nes_rgb_2,192);
 	}
 	else if(palette_value == 3) {
-	memcpy(nes_rgb,nes_rgb_3,192);	
+	memcpy(nes_rgb,nes_rgb_3,192);
 	}
 	else if(palette_value == 4) {
-	memcpy(nes_rgb,nes_rgb_4,192);	
+	memcpy(nes_rgb,nes_rgb_4,192);
 	}
 	else if(palette_value == 5) {
-	memcpy(nes_rgb,nes_rgb_5,192);	
+	memcpy(nes_rgb,nes_rgb_5,192);
 	}
 	else if(palette_value == 6) {
-	memcpy(nes_rgb,nes_rgb_6,192);	
+	memcpy(nes_rgb,nes_rgb_6,192);
 	}
 	else if(palette_value == 7) {
 	memcpy(nes_rgb,nes_rgb_7,192);
 	}
 	else if(palette_value == 8) {
-	memcpy(nes_rgb,nes_rgb_8,192);	
+	memcpy(nes_rgb,nes_rgb_8,192);
 	}
 	else if(palette_value == 9) {
-	memcpy(nes_rgb,nes_rgb_9,192);	
+	memcpy(nes_rgb,nes_rgb_9,192);
 	}
 	else if(palette_value == 10) {
-	memcpy(nes_rgb,nes_rgb_10,192);	
+	memcpy(nes_rgb,nes_rgb_10,192);
 	}
 	else if(palette_value == 11) {
 	memcpy(nes_rgb,nes_rgb_11,192);
@@ -798,17 +799,17 @@ void menu_extra_action(void)
 		if(lastbutton_type == 2) {
 			switch(lastbutton_cnt) {
 			case 0:
-				__emuflags|=LIGHTGUN;
+				globals.emuFlags|=LIGHTGUN;
 				menu_stat = 0;
 				menu_draw = 0;
-				__emuflags &= ~SCREENSWAP;
+				globals.emuFlags &= ~SCREENSWAP;
 				hideconsole();
 				break;
 			case 1:
-				__emuflags|=LIGHTGUN;
+				globals.emuFlags|=LIGHTGUN;
 				menu_stat = 0;
 				menu_draw = 0;
-				__emuflags |= SCREENSWAP;
+				globals.emuFlags |= SCREENSWAP;
 				lcdMainOnBottom();
 				powerOn(PM_BACKLIGHT_BOTTOM);
 				powerOff(PM_BACKLIGHT_TOP);
@@ -840,7 +841,7 @@ void menu_extra_action(void)
 						romfileext[3]=0;
 						f=fopen(romfilename,"w");
 						if(f) {
-							fwrite((u8*)rom_start,1,16 + (65500 * (__prgsize16k >> 2)),f);
+							fwrite((u8*)rom_start,1,16 + (65500 * (globals.prgSize16k >> 2)),f);
 							fflush(f);
 							fclose(f);
 						}
@@ -854,7 +855,7 @@ void menu_extra_action(void)
 	if(lastbutton && touchstate == 3) {
 		if(lastbutton_type == 2) {
 			if(lastbutton_cnt == 2) {
-				__emuflags |= MICBIT;
+				globals.emuFlags |= MICBIT;
 			}
 		}
 	}
@@ -1084,11 +1085,11 @@ void menu_shortcut_func(void)
 void menu_config_start(void)
 {
 	consoletext(64*7 + 1, "Save SRAM", 0);
-	consoletext(64*7 + ((__emuflags & AUTOSRAM) ? 25 : 58), "*", 0x1000);
-	consoletext(64*7 + ((__emuflags & AUTOSRAM) ? 58 : 25), " ", 0x1000);
+	consoletext(64*7 + ((globals.emuFlags & AUTOSRAM) ? 25 : 58), "*", 0x1000);
+	consoletext(64*7 + ((globals.emuFlags & AUTOSRAM) ? 58 : 25), " ", 0x1000);
 	consoletext(64*12 + 1, "GFX Screen", 0);
-	consoletext(64*12 + ((__emuflags & SCREENSWAP) ? 58 : 25), "*", 0x1000);
-	consoletext(64*12 + ((__emuflags & SCREENSWAP) ? 25 : 58), " ", 0x1000);
+	consoletext(64*12 + ((globals.emuFlags & SCREENSWAP) ? 58 : 25), "*", 0x1000);
+	consoletext(64*12 + ((globals.emuFlags & SCREENSWAP) ? 25 : 58), " ", 0x1000);
 	consoletext(64*17 + 1, "Saves dir", 0);
 	consoletext(64*17 + (use_saves_dir ? 25 : 58), "*", 0x1000);
 	consoletext(64*17 + (use_saves_dir ? 58 : 25), " ", 0x1000);
@@ -1099,16 +1100,16 @@ void menu_config_func(void)
 	menu_stat = 3;
 	switch(lastbutton_cnt) {
 	case 0:	//auto
-		__emuflags |= AUTOSRAM;
+		globals.emuFlags |= AUTOSRAM;
 		break;
 	case 1: //manual
-		__emuflags &= ~AUTOSRAM;
+		globals.emuFlags &= ~AUTOSRAM;
 		break;
 	case 2: //On top
-		__emuflags &=~SCREENSWAP;
+		globals.emuFlags &=~SCREENSWAP;
 		break;
 	case 3: //On sub
-		__emuflags |= SCREENSWAP;
+		globals.emuFlags |= SCREENSWAP;
 		break;
 	case 4: //Use Saves Subdir
 		use_saves_dir = true;
@@ -1170,23 +1171,23 @@ void menu_saveini(void)
 	if(joyflags & B_A_SWAP)	i = 1;
 	else i = 0;
 	ini_putl("nesDSrev2", "BASwap", i, ininame);
-
-	i = __emuflags& 3;
+	
+	i = globals.emuFlags& 3;
 	ini_putl("nesDSrev2", "Blend", i, ininame);
 
-	i = (__emuflags & PALTIMING) ? 1 : 0;
+	i = (globals.emuFlags & PALTIMING) ? 1 : 0;
 	ini_putl("nesDSrev2", "PALTiming", i, ininame);
 
-	i = (__emuflags >> 6) & 3;
+	i = (globals.emuFlags >> 6) & 3;
 	ini_putl("nesDSrev2", "Render", i, ininame);
 
-	i = (__emuflags & AUTOSRAM) ? 1 : 0;
+	i = (globals.emuFlags & AUTOSRAM) ? 1 : 0;
 	ini_putl("nesDSrev2", "AutoSRAM", i, ininame);
 
-	i = (__emuflags & ALLPIXELON) ? 1 : 0;
+	i = (globals.emuFlags & ALLPIXELON) ? 1 : 0;
 	ini_putl("nesDSrev2", "AllPixelOn", i, ininame);
 
-	i = (__emuflags & SCREENSWAP) ? 1 : 0;
+	i = (globals.emuFlags & SCREENSWAP) ? 1 : 0;
 	ini_putl("nesDSrev2", "ScreenSwap", i, ininame);
 
 	ini_putl("nesDSrev2", "Screen_Scale", ad_scale, ininame);

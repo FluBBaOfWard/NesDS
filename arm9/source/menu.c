@@ -7,6 +7,7 @@
 
 #include "c_defs.h"
 #include "menu.h"
+#include "NesMachine.h"
 
 struct menu_item menu_file_items[] = {
 	{
@@ -696,7 +697,7 @@ void do_menu()
 	if(menu_stat == 0 && gesture != 0)
 		return;
 
-	if(__emuflags & LIGHTGUN)
+	if(globals.emuFlags & LIGHTGUN)
 		return;
 
 	if(menu_stat >= 5 && menu_func != NULL) {

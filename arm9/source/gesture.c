@@ -3,6 +3,7 @@
 #include <string.h>
 #include "c_defs.h"
 #include "menu.h"
+#include "NesMachine.h"
 
 #define GMARGIN 32
 
@@ -121,7 +122,7 @@ void do_gesture(void)
 		if(gesture_pos > 0) {
 			int i;
 
-			if(!(__emuflags & SCREENSWAP)) {
+			if(!(globals.emuFlags & SCREENSWAP)) {
 				powerOff(PM_BACKLIGHT_BOTTOM);
 			} else {
 				powerOff(PM_BACKLIGHT_TOP);
@@ -143,8 +144,8 @@ void do_gesture(void)
 			gesture_combo[0] = 0;
 			return;
 		}
-		else if(__emuflags & LIGHTGUN) {
-			if(!(__emuflags & SCREENSWAP)) {
+		else if(globals.emuFlags & LIGHTGUN) {
+			if(!(globals.emuFlags & SCREENSWAP)) {
 				powerOff(PM_BACKLIGHT_BOTTOM);
 			} else {
 				powerOff(PM_BACKLIGHT_TOP);

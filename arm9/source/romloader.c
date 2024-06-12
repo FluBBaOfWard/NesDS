@@ -7,6 +7,7 @@
 #include "c_defs.h"
 #include "minIni.h"
 #include "menu.h"
+#include "NesMachine.h"
 //#include "extlink_filestruct.h"
 
 extern int subscreen_stat;
@@ -52,14 +53,14 @@ int is_nsf_file(char *name, char *rom)
 	//actually the first four chars should be "NESM"
 	if(strstr(name, ".NSF") || strstr(name, ".nsf")) {
 		memcpy(&nsfHeader, rom, sizeof(nsfHeader));
-		__emuflags |= NSFFILE;
+		globals.emuFlags |= NSFFILE;
 		__nsfSongNo = 0;
 		__nsfPlay = 0;
 		__nsfInit = 0;
 		IPC_MAPPER = 256;
 		return 1;
 	}
-	__emuflags &= ~NSFFILE;
+	globals.emuFlags &= ~NSFFILE;
 	return 0;
 }
 
@@ -86,7 +87,7 @@ void do_rommenu() {
 	if(!roms) {
 		if(!active_interface) {			//another driver is present, but init failed
 			consoletext(64*3,"Device failed.",0);
-		} else {						//no DLDI error, no files
+		} else {					//no DLDI error, no files
 			consoletext(64*3,"No roms found.",0);
 		}
 		while(1) swiWaitForVBlank();
@@ -249,7 +250,7 @@ int loadrom() {
 	char *roms; // rom data
 
 	if(strstr(romfilename, ".fds") || strstr(romfilename, ".FDS")) {
-		if ((__emuflags & DISKBIOS) == 0) {
+		if ((globals.emuFlags & DISKBIOS) == 0) {
 			return 1;
 		}
 	}
@@ -474,16 +475,16 @@ int bootext() {
 		if((iniret=ini_getl("nesDSrev2","BASwap",0,ininame)) != 0) joyflags|=B_A_SWAP;
 
 		if((iniret=ini_getl("nesDSrev2","LRDisable",0,ininame)) != 0) joyflags|=L_R_DISABLE;
-		if((iniret=ini_getl("nesDSrev2","Blend",0,ininame)) != 0) __emuflags|=iniret&3;
-		if((iniret=ini_getl("nesDSrev2","PALTiming",0,ininame)) != 0) __emuflags|=PALTIMING;
-		if((iniret=ini_getl("nesDSrev2","FollowMem",0,ininame)) != 0) __emuflags|=FOLLOWMEM;
-		if((iniret=ini_getl("nesDSrev2","ScreenSwap",0,ininame)) != 0) __emuflags|=SCREENSWAP;
-		if((iniret=ini_getl("nesDSrev2","AllPixelOn",0,ininame)) != 0) __emuflags|=ALLPIXELON;
+		if((iniret=ini_getl("nesDSrev2","Blend",0,ininame)) != 0) globals.emuFlags|=iniret&3;
+		if((iniret=ini_getl("nesDSrev2","PALTiming",0,ininame)) != 0) globals.emuFlags|=PALTIMING;
+		if((iniret=ini_getl("nesDSrev2","FollowMem",0,ininame)) != 0) globals.emuFlags|=FOLLOWMEM;
+		if((iniret=ini_getl("nesDSrev2","ScreenSwap",0,ininame)) != 0) globals.emuFlags|=SCREENSWAP;
+		if((iniret=ini_getl("nesDSrev2","AllPixelOn",0,ininame)) != 0) globals.emuFlags|=ALLPIXELON;
 		if((iniret=ini_getl("nesDSrev2","Render",0,ininame)) != 0)  {
-			if(iniret == 1)	__emuflags|=SPLINE;
-			else __emuflags|=SOFTRENDER;
+			if(iniret == 1)	globals.emuFlags|=SPLINE;
+			else globals.emuFlags|=SOFTRENDER;
 		}
-		if((iniret=ini_getl("nesDSrev2","AutoSRAM",0,ininame)) != 0) __emuflags|=AUTOSRAM;
+		if((iniret=ini_getl("nesDSrev2","AutoSRAM",0,ininame)) != 0) globals.emuFlags|=AUTOSRAM;
 		if((iniret=ini_getl("nesDSrev2","Screen_Scale",0,ininame)) != 0) ad_scale=iniret;
 		if((iniret=ini_getl("nesDSrev2","Screen_Offset",0,ininame)) != 0) ad_ypos=iniret;
 		if((iniret=ini_getl("nesDSrev2","Screen_Gamma",0,ininame)) != 0) gammavalue=iniret;
@@ -527,7 +528,7 @@ int bootext() {
 			fseek(bios, 0, SEEK_SET);
 			fread(diskbios, 8192, 1, bios);
 
-			__emuflags |= DISKBIOS;
+			globals.emuFlags |= DISKBIOS;
 		}
 		fclose(bios);
 	}

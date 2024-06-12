@@ -6,6 +6,7 @@
 #include <string.h>
 #include "c_defs.h"
 #include "menu.h"
+#include "NesMachine.h"
 
 int save_slots = 0;
 int slots_num = 0;
@@ -27,7 +28,7 @@ void reg4015interrupt(u32 msg, void *none)
 			addr: no known
 * description:		none
 ******************************/
-void writeAPU(u32 val,u32 addr) 
+void writeAPU(u32 val, u32 addr) 
 {
 	if(IPC_APUW - IPC_APUR < 256 && addr != 0x4011 && 
 			((addr > 0x8000 && (debuginfo[MAPPER] == 24 || debuginfo[MAPPER] == 26)) ||
@@ -37,7 +38,7 @@ void writeAPU(u32 val,u32 addr)
 	}
 	if(addr == 0x4011) {
 		unsigned char *out = IPC_PCMDATA;
-		out[__scanline] = val | 0x80;
+		out[globals.ppu.scanline] = val | 0x80;
 		*(IPC_APUWRITE + (addr & 0xFF)) = 0x100 | val;
 	}
 }
@@ -158,7 +159,7 @@ void leave_save_context() {
 void load_sram() {
 	FILE *f;
 
-	//if(!(__cartflags&SRAM)) return;		//some games have bad headers.
+	//if(!(globals.cartFlags&SRAM)) return;		//some games have bad headers.
 	if(!active_interface) return;
 
 	enter_save_context();
@@ -184,7 +185,7 @@ void load_sram() {
 void save_sram() {
 	FILE *f;
 
-	//if(!(__cartflags&SRAM)) return;		//some games have bad headers.
+	//if(!(globals.cartFlags&SRAM)) return;		//some games have bad headers.
 	if(!active_interface) return;
 
 	enter_save_context();
@@ -321,14 +322,14 @@ void do_quickf(int func)
 		write_savestate(slots_num);
 		break;
 	case 2:
-		__emuflags &= ~LIGHTGUN;
+		globals.emuFlags &= ~LIGHTGUN;
 		do_rommenu();
 		break;
 	case 3:
 		joyflags^=B_A_SWAP;
 		break;
 	case 4:
-		__emuflags^=AUTOSRAM;
+		globals.emuFlags^=AUTOSRAM;
 		menu_stat = 1;
 		menu_draw = 0;
 		save_sram();
@@ -350,15 +351,15 @@ void do_quickf(int func)
 		rescale(ad_scale,ad_ypos);
 		break;
 	case 9:
-		__emuflags^=SPLINE;
+		globals.emuFlags^=SPLINE;
 		menu_stat = 1;
 		menu_draw = 0;
 		break;
 	case 10:
 		{
 			int tmp;
-			tmp = (__emuflags+1)&3;
-			__emuflags=(__emuflags&~3)|tmp;
+			tmp = (globals.emuFlags+1)&3;
+			globals.emuFlags=(globals.emuFlags&~3)|tmp;
 			menu_stat = 1;
 			menu_draw = 0;
 		}
@@ -368,7 +369,7 @@ void do_quickf(int func)
 			fdscmdwrite(0);
 		}
 		break;
-	case 12:
+	case 12: 
 		if(debuginfo[MAPPER] == 20) {
 			fdscmdwrite(1);
 		}
@@ -385,24 +386,24 @@ void do_quickf(int func)
 		break;
 	case 15:
 		{
-			if(!(__emuflags & LIGHTGUN))
-				__emuflags ^= SCREENSWAP;
+			if(!(globals.emuFlags & LIGHTGUN))
+				globals.emuFlags ^= SCREENSWAP;
 		}
 		break;
 	case 16:
 		{
-			__emuflags &= ~LIGHTGUN;
-			__emuflags &= ~SCREENSWAP;
+			globals.emuFlags &= ~LIGHTGUN;
+			globals.emuFlags &= ~SCREENSWAP;
 		}
 		break;
 	case 17:
 		{
-			__emuflags |= FASTFORWARD;
+			globals.emuFlags |= FASTFORWARD;
 		}
 		break;
 	case 18:
 		{
-			__emuflags |= REWIND;
+			globals.emuFlags |= REWIND;
 		}
 		break;
 	default:
@@ -496,23 +497,23 @@ void rescale(int a, int b)
 {
 	if(b >= 0)
 		REG_BG3Y = -(b >> 8);
-	else
+	else 
 		REG_BG3Y = ((-b) >> 8);
-	if(__emuflags & ALLPIXEL) {
+	if(globals.emuFlags & ALLPIXEL) {
 		int pos = b / (1 << 16);
-
+	
 		if(pos < -(240 - 192)/2) {
-			__emuflags |= SCREENSWAP;
-			all_pix_start = 0;
-			all_pix_end = 1 - pos;
+			globals.emuFlags |= SCREENSWAP;
+			globals.ppu.pixStart = 0;
+			globals.ppu.pixEnd = 1 - pos;
 			lcdMainOnBottom();
 			REG_BG3Y_SUB = (-(192 + pos)) << 8;
 		} else {
-			__emuflags &= ~SCREENSWAP;
-			all_pix_start = 192 - pos;
-			if(all_pix_start > 239)
-				all_pix_start = 239;
-			all_pix_end = 240;
+			globals.emuFlags &= ~SCREENSWAP;
+			globals.ppu.pixStart = 192 - pos;
+			if(globals.ppu.pixStart > 239)
+				globals.ppu.pixStart = 239;
+			globals.ppu.pixEnd = 240;
 			lcdMainOnTop();
 			REG_BG3Y_SUB = 0;
 		}
